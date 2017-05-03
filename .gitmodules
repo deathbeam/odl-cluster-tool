@@ -1,0 +1,3 @@
+[submodule "tools/integration-test"]
+	path = tools/integration-test
+	url = https://github.com/opendaylight/integration-test

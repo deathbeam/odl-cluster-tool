@@ -1,0 +1,192 @@
+#!/usr/bin/env lua
+
+local argparse = require "argparse"
+
+local function scriptpath()
+  local str = debug.getinfo(2, "S").source:sub(2)
+  return str:match("(.*/)") .. '../tools/'
+end
+
+local env = {
+  testpath = os.getenv("CLUSTER_TEST_PATH") or scriptpath() .. "integration-test",
+  pluginpath = os.getenv("CLUSTER_PLUGIN_PATH") or os.getenv("PWD"),
+  clusteruser = os.getenv("CLUSTER_USER") or "odl",
+  clusterpassword = os.getenv("CLUSTER_PASS") or "ldo",
+  clusterkarafuser = os.getenv("CLUSTER_KARAF_USER") or "karaf",
+  clusterkarafpassword = os.getenv("CLUSTER_KARAF_PASS") or "karaf",
+  clusterlogpath = os.getenv("CLUSTER_LOG_PATH") or "/tmp/clusterlog",
+}
+
+local function join(values)
+  local result
+  for _, value in ipairs(values) do
+    result = result and result .. "," .. value or value
+  end
+  return result
+end
+
+local function runonall(values, callback)
+  if values then
+    for _, value in ipairs(values) do
+      callback(value)
+    end
+  end
+end
+
+local function runremotessh(controllers, command, suffix, port, user, password)
+  runonall(controllers, function(address)
+    local command = string.format([[
+      sshpass -p %s ssh -q \
+        -p %s \
+        -o UserKnownHostsFile=/dev/null \
+        -o StrictHostKeyChecking=no \
+        %s@%s '%s' %s
+    ]], password, port, user, address, command, suffix or '')
+
+    if verbose then
+      print(command)
+    end
+
+    os.execute(command)
+  end)
+end
+
+local function runremoteshell(controllers, command, suffix)
+  runremotessh(controllers, command, suffix, 22, env.clusteruser, env.clusterpassword)
+end
+
+local function runremotekaraf(controllers, command, suffix)
+  runremotessh(controllers, command, suffix, 8101, env.clusterkarafuser, env.clusterkarafpassword)
+end
+
+local function run()
+  local parser = argparse("cluster", "ODL OpenFlowPlugin cluster management script")
+  local verbose = false
+
+  parser:option("-c --controller"):count("*")
+  parser:option("-d --deploy")
+  parser:option("-e --executekaraf")
+  parser:option("-E --execute")
+  parser:option("-b --blaster")
+  parser:flag("-v --verbose")
+  parser:flag("-f --featurelist")
+  parser:flag("-l --loglist")
+  parser:flag("-L --logtail")
+  parser:flag("-t --logget")
+  parser:flag("-T --logset")
+  parser:flag("-n --status")
+  parser:flag("-N --netstat")
+  parser:flag("-s --start")
+  parser:flag("-S --stop")
+  parser:flag("-x --clean")
+  parser:flag("-X --wipe")
+
+  args = parser:parse()
+  controllers = args.controller or { "127.0.0.1" }
+
+  if args.verbose then
+    verbose = true
+  end
+
+  if args.deploy then
+    local template = args.deploy
+    local hosts = join(controllers)
+
+    local command = string.format([[
+      cd %s && python2 %s/tools/clustering/cluster-deployer/deploy.py \
+        --template=%s \
+        --distribution=`find %s/distribution/karaf/target/ -maxdepth 1 -name '*.zip'` \
+        --rootdir=/home/odl \
+        --hosts=%s \
+        --user=%s \
+        --password=%s
+    ]], scriptpath(), env.testpath, template, env.pluginpath, hosts, env.clusteruser, env.clusterpassword)
+
+    os.execute(command)
+  end
+
+  if args.start then
+    runremotessh("./deploy/current/odl/bin/start debug")
+  end
+
+  if args.logset then
+    runremotekaraf([[
+      log:set DEBUG org.opendaylight.openflowplugin.impl;
+      log:set DEBUG org.opendaylight.openflowplugin;
+      log:set INFO org.opendaylight.openflowjava;
+    ]])
+  end
+
+  if args.loglist then
+    runremotekaraf(controllers, "log:list")
+  end
+
+  if args.featurelist then
+    runremotekaraf(controllers, "feature:list | grep 'openflowplugin'")
+  end
+
+  if args.blaster then
+    runonall(controllers, function(address)
+      local flows = args.blaster
+      local command = string.format([[
+        python2 %s/tools/odl-mdsal-clustering-tests/clustering-performance-test/flow_config_blaster.py \
+          --host %s \
+          --flows %s \
+          --fpr 100 \
+          --no-delete \
+          --auth
+      ]], env.testpath, address, flows)
+
+      os.execute(command)
+    end)
+  end
+
+  if args.execute then
+    runremoteshell(args.execute)
+  end
+
+  if args.executekaraf then
+    runremotekaraf(args.executekaraf)
+  end
+
+  if args.status then
+    runremoteshell(controllers, "./bin/odlCtrlStatus.sh")
+  end
+
+  if args.netstat then
+    runremoteshell("./bin/odlCtrlNetstat.sh")
+  end
+
+  if args.logget then
+    local time = os.date("*t")
+    local date = ("%02d-%02d-%02d"):format(time.year, time.month, time.day)
+    local now = ("%02d%02d%02d"):format(time.hour, time.min, time.sec)
+    local logpath = string.format("%s/%s", env.clusterlogpath, date)
+    os.execute("mkdir -p " .. logpath)
+
+    local suffix = string.format("> %s/%s_%s.log", logpath, now, address)
+    runremoteshell(controllers, "cd /home/odl/deploy/current/odl/data/log; cat $(ls -1rt karaf.log*)", suffix)
+  end
+
+  if args.stop then
+    runremoteshell(controllers, "./kill_controller.sh")
+  end
+
+  if args.clean then
+   runremoteshell(controllers, [[
+     rm -rf deploy/current/odl/data \
+       deploy/current/odl/instances \
+       deploy/current/odl/journal \
+       deploy/current/odl/snapshots \
+       deploy/current/odl/*.db \
+       deploy/current/odl/cache \
+       deploy/current/odl/lock
+   ]])
+  end
+
+  if args.wipe then
+    runremoteshell(controllers, "rm -rf deploy")
+  end
+end
+
+run()
