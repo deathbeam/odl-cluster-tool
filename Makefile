@@ -6,4 +6,4 @@ clean:
 install:
 	git submodule update --init --recursive
 	git submodule update --recursive --remote
-	mkdir tools/temp
+	mkdir -p tools/temp

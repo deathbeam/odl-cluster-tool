@@ -1,6 +1,7 @@
 #!/usr/bin/env lua
 
 local argparse = require "argparse"
+local verbose = false
 
 local function scriptpath()
   local str = debug.getinfo(2, "S").source:sub(2)
@@ -25,6 +26,14 @@ local function join(values)
   return result
 end
 
+local function runcommand(command)
+  if verbose then
+    print(command)
+  end
+
+  os.execute(command)
+end
+
 local function runonall(values, callback)
   if values then
     for _, value in ipairs(values) do
@@ -40,14 +49,11 @@ local function runremotessh(controllers, command, suffix, port, user, password)
         -p %s \
         -o UserKnownHostsFile=/dev/null \
         -o StrictHostKeyChecking=no \
-        %s@%s '%s' %s
+        %s@%s \
+        '%s' %s
     ]], password, port, user, address, command, suffix or '')
 
-    if verbose then
-      print(command)
-    end
-
-    os.execute(command)
+    runcommand(command)
   end)
 end
 
@@ -61,12 +67,11 @@ end
 
 local function run()
   local parser = argparse("cluster", "ODL OpenFlowPlugin cluster management script")
-  local verbose = false
 
   parser:option("-c --controller"):count("*")
   parser:option("-d --deploy")
   parser:option("-e --executekaraf")
-  parser:option("-E --execute")
+  parser:option("-E --executeShell")
   parser:option("-b --blaster")
   parser:flag("-v --verbose")
   parser:flag("-f --featurelist")
@@ -102,15 +107,15 @@ local function run()
         --password=%s
     ]], scriptpath(), env.testpath, template, env.pluginpath, hosts, env.clusteruser, env.clusterpassword)
 
-    os.execute(command)
+    runcommand(command)
   end
 
   if args.start then
-    runremotessh("./deploy/current/odl/bin/start debug")
+    runremoteshell(controllers, "./deploy/current/odl/bin/start debug")
   end
 
   if args.logset then
-    runremotekaraf([[
+    runremotekaraf(controllers, [[
       log:set DEBUG org.opendaylight.openflowplugin.impl;
       log:set DEBUG org.opendaylight.openflowplugin;
       log:set INFO org.opendaylight.openflowjava;
@@ -137,16 +142,16 @@ local function run()
           --auth
       ]], env.testpath, address, flows)
 
-      os.execute(command)
+      runcommand(command)
     end)
   end
 
-  if args.execute then
-    runremoteshell(args.execute)
+  if args.executeShell then
+    runremoteshell(controllers, args.executeShell)
   end
 
   if args.executekaraf then
-    runremotekaraf(args.executekaraf)
+    runremotekaraf(controllers, args.executekaraf)
   end
 
   if args.status then
@@ -154,7 +159,7 @@ local function run()
   end
 
   if args.netstat then
-    runremoteshell("./bin/odlCtrlNetstat.sh")
+    runremoteshell(controllers, "./bin/odlCtrlNetstat.sh")
   end
 
   if args.logget then
@@ -162,7 +167,7 @@ local function run()
     local date = ("%02d-%02d-%02d"):format(time.year, time.month, time.day)
     local now = ("%02d%02d%02d"):format(time.hour, time.min, time.sec)
     local logpath = string.format("%s/%s", env.clusterlogpath, date)
-    os.execute("mkdir -p " .. logpath)
+    runcommand("mkdir -p " .. logpath)
 
     local suffix = string.format("> %s/%s_%s.log", logpath, now, address)
     runremoteshell(controllers, "cd /home/odl/deploy/current/odl/data/log; cat $(ls -1rt karaf.log*)", suffix)

@@ -9,20 +9,24 @@
 # Note that at this time the only shard-strategy we support is module which basically
 # will put all the data of a single module in two shards (one for config and one for
 # operational data)
+
 modules = [
     {
         name = "inventory"
         namespace = "urn:opendaylight:inventory"
         shard-strategy = "module"
     },
+
     {
         name = "topology"
         namespace = "urn:TBD:params:xml:ns:yang:network-topology"
         shard-strategy = "module"
     },
+
     {
         name = "toaster"
         namespace = "http://netconfcentral.org/ns/toaster"
         shard-strategy = "module"
     }
+
 ]

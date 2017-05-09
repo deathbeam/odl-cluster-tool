@@ -1,6 +1,6 @@
-# odl-openflowplugin-cluster-tool
+# odl-cluster-tool
 
-ODL OpenFlowPlugin cluster management script
+ODL cluster management script
 
 Installation:
  * Install luarocks and lua
