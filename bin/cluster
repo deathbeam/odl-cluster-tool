@@ -101,11 +101,11 @@ local function run()
       cd %s && python2 %s/tools/clustering/cluster-deployer/deploy.py \
         --template=%s \
         --distribution=`find %s/distribution/karaf/target/ -maxdepth 1 -name '*.zip'` \
-        --rootdir=/home/odl \
+        --rootdir=/home/%s \
         --hosts=%s \
         --user=%s \
         --password=%s
-    ]], scriptpath(), env.testpath, template, env.pluginpath, hosts, env.clusteruser, env.clusterpassword)
+    ]], scriptpath(), env.testpath, template, env.pluginpath, env.clusteruser ,hosts, env.clusteruser, env.clusterpassword)
 
     runcommand(command)
   end
@@ -169,7 +169,7 @@ local function run()
     local logpath = string.format("%s/%s", env.clusterlogpath, date)
     runcommand("mkdir -p " .. logpath)
 
-    runremoteshell(controllers, "cd /home/odl/deploy/current/odl/data/log; cat $(ls -1rt karaf.log*)", function(address)
+    runremoteshell(controllers, "cd /home/" .. env.clusteruser .. "/deploy/current/odl/data/log; cat $(ls -1rt karaf.log*)", function(address)
       local suffix = string.format("> %s/%s_%s.log", logpath, now, address)
       return suffix
     end)
