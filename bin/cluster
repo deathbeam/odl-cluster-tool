@@ -51,7 +51,7 @@ local function runremotessh(controllers, command, suffix, port, user, password)
         -o StrictHostKeyChecking=no \
         %s@%s \
         '%s' %s
-    ]], password, port, user, address, command, suffix or '')
+    ]], password, port, user, address, command, suffix and suffix(address) or '')
 
     runcommand(command)
   end)
@@ -169,8 +169,10 @@ local function run()
     local logpath = string.format("%s/%s", env.clusterlogpath, date)
     runcommand("mkdir -p " .. logpath)
 
-    local suffix = string.format("> %s/%s_%s.log", logpath, now, address)
-    runremoteshell(controllers, "cd /home/odl/deploy/current/odl/data/log; cat $(ls -1rt karaf.log*)", suffix)
+    runremoteshell(controllers, "cd /home/odl/deploy/current/odl/data/log; cat $(ls -1rt karaf.log*)", function(address)
+      local suffix = string.format("> %s/%s_%s.log", logpath, now, address)
+      return suffix
+    end)
   end
 
   if args.stop then
