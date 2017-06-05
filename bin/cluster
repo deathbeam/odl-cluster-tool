@@ -116,7 +116,7 @@ local function run()
 
   if args.logset then
     runremotekaraf(controllers, [[
-      log:set DEBUG org.opendaylight.openflowplugin;
+      log:set INFO  org.opendaylight.openflowplugin;
       log:set DEBUG org.opendaylight.openflowplugin.impl;
       log:set WARN  org.opendaylight.openflowplugin.impl.datastore;
       log:set WARN  org.opendaylight.openflowplugin.impl.services.AbstractMultipartService;
@@ -167,7 +167,7 @@ local function run()
   end
 
   if args.logtail then
-    runremoteshell(controllers, "tail -n " .. args.logtail .. "./deploy/current/odl/data/log/karaf.log")
+    runremoteshell(controllers, "tail -n " .. args.logtail .. " ./deploy/current/odl/data/log/karaf.log")
   end
 
   if args.logget then
