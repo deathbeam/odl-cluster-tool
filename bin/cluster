@@ -122,7 +122,7 @@ local function run()
       log:set WARN  org.opendaylight.openflowplugin.impl.services.AbstractMultipartService;
       log:set WARN  org.opendaylight.openflowplugin.impl.statistics;
       log:set INFO  org.opendaylight.openflowjava;
-
+      log:set DEBUG org.opendaylight.mdsal.singleton.dom.impl;
     ]])
   end
 
