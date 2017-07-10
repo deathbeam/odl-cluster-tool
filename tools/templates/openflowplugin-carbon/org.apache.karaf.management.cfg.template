@@ -18,23 +18,40 @@
 ################################################################################
 
 #
-# Comma separated list of features repositories to register by default
+# The properties in this file define the configuration of Apache Karaf's JMX Management
 #
-featuresRepositories = \
-    mvn:org.opendaylight.openflowplugin/features-openflowplugin-extension/{{ODL_DISTRIBUTION}}/xml/features, \
-    mvn:org.apache.karaf.features/framework/4.0.9/xml/features, \
-    mvn:org.apache.karaf.features/standard/4.0.9/xml/features, \
-    mvn:org.opendaylight.openflowplugin/features-openflowplugin/{{ODL_DISTRIBUTION}}/xml/features
 
 #
-# Comma separated list of features to install at startup
+# Port number for RMI registry connection
 #
-featuresBoot = \
-    standard, \
-    wrap, \
-    odl-openflowplugin-flow-services-rest
+rmiRegistryPort = 1099
 
 #
-# Defines if the boot features are started in asynchronous mode (in a dedicated thread)
+# Port number for RMI server connection
 #
-featuresBootAsynchronous=false
+rmiServerPort = 44444
+
+#
+# Name of the JAAS realm used for authentication
+#
+jmxRealm = karaf
+
+#
+# The service URL for the JMXConnectorServer
+#
+serviceUrl = service:jmx:rmi://{{HOST}}:${rmiServerPort}/jndi/rmi://{{HOST}}:${rmiRegistryPort}/karaf-${karaf.name}
+
+#
+# Whether any threads started for the JMXConnectorServer should be started as daemon threads
+#
+daemon = true
+
+#
+# Whether the JMXConnectorServer should be started in a separate thread
+#
+threaded = true
+
+#
+# The ObjectName used to register the JMXConnectorServer
+#
+objectName = connector:name=rmi
