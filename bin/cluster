@@ -118,9 +118,9 @@ local function run()
     runremotekaraf(controllers, [[
       log:set INFO  org.opendaylight.openflowplugin;
       log:set DEBUG org.opendaylight.openflowplugin.impl;
-      log:set WARN  org.opendaylight.openflowplugin.impl.datastore;
-      log:set WARN  org.opendaylight.openflowplugin.impl.services.AbstractMultipartService;
-      log:set WARN  org.opendaylight.openflowplugin.impl.statistics;
+      log:set INFO  org.opendaylight.openflowplugin.impl.datastore;
+      log:set INFO  org.opendaylight.openflowplugin.impl.services.AbstractMultipartService;
+      log:set INFO  org.opendaylight.openflowplugin.impl.statistics;
       log:set INFO  org.opendaylight.openflowjava;
       log:set DEBUG org.opendaylight.mdsal.singleton.dom.impl;
     ]])
